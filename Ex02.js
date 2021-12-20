@@ -436,6 +436,7 @@ router.delete('/post/(:id)', (req, res) => { delete_post(req, res )  } )
 //messagesRouts
 router.post('/message/(:id)', (req, res) => { send_message(req, res )  } )
 router.post('/messages', (req, res) => { send_messages(req, res )  } )
+router.get('/messages', (req, res) => { get_messages(req, res )  } )
 
 
 
@@ -606,11 +607,11 @@ function send_message( req, res )
 	}
 	
 	//create post details
-	let message_id = get_new_message_id();
+	let message_id = g_messages.length+1;
 	let message_creationDate = moment().format('DD-MM-YYYY');
 	let message_text = text;
 	let message_sender_id = sender.id;
-	let message_recipient_id = sender.id;
+	let message_recipient_id = id;
 
 	//add message
 	const new_message = { 	message_id: message_id , 
@@ -618,7 +619,7 @@ function send_message( req, res )
 						recipient_id: message_recipient_id,
 						creation_date: message_creationDate,
 						text: message_text	} ;
-	g_posts.push( new_message);
+	g_messages.push( new_message);
 	
 	res.send(  JSON.stringify( new_message) );   
 }
@@ -634,13 +635,13 @@ async function send_messages(req, res) {
 			res.send( "Missing text in request")
 			return;
 		}
-		let message = {}
-		let message_id = get_new_message_id();
+		//let message = {}
 		let message_creationDate = moment().format('DD-MM-YYYY');
 		let message_text = text;
 		let message_sender_id = 0;
 		g_users.forEach(user => {
-			//create post details
+			//create message details
+			let message_id = g_messages.length;
 			let message_recipient_id = user.id;
 			//add message
 			const new_message = { 	message_id: message_id , 
@@ -648,13 +649,13 @@ async function send_messages(req, res) {
 								recipient_id: message_recipient_id,
 								creation_date: message_creationDate,
 								text: message_text	} ;
-			g_posts.push( new_message);
+			g_messages.push( new_message);
 			
 			console.log(`user ${user.id} got message`);	
-			if(message_recipient_id = g_users[g_users.length-1].id)
-			{
-				message = new_message;
-			}
+			// if(message_recipient_id = g_users[g_users.length-1].id)
+			// {
+			// 	message = new_message;
+			// }
 		});
 		//		res.send(  JSON.stringify(message)); 
 		//	+ `sent successfully to ${g_users.length -1}`) );  
@@ -670,4 +671,43 @@ function get_new_message_id()
 	)
 
 	return max_id + 1;
+}
+
+function get_messages(req,res){
+	const token = req.body.token;
+	// if (!id)
+	// {
+	// 	res.status( StatusCodes.BAD_REQUEST );
+	// 	res.send( "Missing id in request")
+	// 	return;
+	// }
+	// if ( id <= 0)
+	// {
+	// 	res.status( StatusCodes.BAD_REQUEST );
+	// 	res.send( "Bad id given")
+	// 	return;
+	// }
+
+	if (!token)
+	{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send( "Missing token in request")
+		return;
+	}
+
+	//find user
+	const user = g_users.find(( curr_user ) => token === curr_user.token)
+	if(user == undefined){
+		res.status( StatusCodes.BAD_REQUEST);
+		res.send("no user with key")
+		return
+	}
+	// if(user.token != token){
+	// 	res.status( StatusCodes.BAD_REQUEST);
+	// 	res.send("only recipient can see mmesages")
+	// 	return
+	// }
+
+	const filtered = g_messages.filter(message => user.id == message.recipient_id);
+	res.send(  JSON.stringify( filtered) );   
 }
