@@ -95,6 +95,7 @@ let g_users = [ {id:1,
 				} ];
  				
 const g_posts = [ ];
+const g_messages = [ ];
 
 
 // API functions
@@ -125,7 +126,7 @@ function authenticate_admin(req,res){
 		res.send("Missing token in request")
 		return "no token";
 	}
-	if(token != admin_key){
+	if(token != g_users[0].token){
 		res.status( StatusCodes.BAD_REQUEST );
 		res.send( "Only admin can access")
 		return "not admin";
@@ -432,6 +433,10 @@ router.post('/posts', (req, res) => { create_post(req, res )  } )
 router.get('/posts', (req, res) => { get_posts(req, res )  } )
 router.delete('/post/(:id)', (req, res) => { delete_post(req, res )  } )
 
+//messagesRouts
+router.post('/message/(:id)', (req, res) => { send_message(req, res )  } )
+router.post('/messages', (req, res) => { send_messages(req, res )  } )
+
 
 
 
@@ -554,4 +559,115 @@ function delete_post( req, res )
 	}
 	g_posts.splice( post.id, 1 )
 	res.send(  JSON.stringify( `deleted post with id ${id}`) );   
+}
+
+//messages
+function send_message( req, res )
+{
+	const id =  parseInt( req.params.id );
+	const token = req.body.token;
+	const text = req.body.text;
+
+	if ( id <= 0)
+	{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send( "Bad id given")
+		return;
+	}
+
+	const idx =  g_users.findIndex( user =>  user.id == id )
+	if ( idx < 0 )
+	{
+		res.status( StatusCodes.NOT_FOUND );
+		res.send( "No such user")
+		return;
+	}
+
+	if (!text)
+	{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send( "Missing text in request")
+		return;
+	}
+
+	if (!token)
+	{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send( "Missing token in request")
+		return;
+	}
+
+	//find sender 
+	const sender = g_users.find(( curr_user ) => token === curr_user.token)
+	if(sender == undefined){
+		res.status( StatusCodes.BAD_REQUEST);
+		res.send("Couldn't find user with key")
+		return
+	}
+	
+	//create post details
+	let message_id = get_new_message_id();
+	let message_creationDate = moment().format('DD-MM-YYYY');
+	let message_text = text;
+	let message_sender_id = sender.id;
+	let message_recipient_id = sender.id;
+
+	//add message
+	const new_message = { 	message_id: message_id , 
+						sender_id: message_sender_id, 
+						recipient_id: message_recipient_id,
+						creation_date: message_creationDate,
+						text: message_text	} ;
+	g_posts.push( new_message);
+	
+	res.send(  JSON.stringify( new_message) );   
+}
+
+async function send_messages(req, res) {
+	let check = await authenticate_admin(req, res);
+	if(check == "admin"){
+		const text = req.body.text;
+
+		if (!text)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing text in request")
+			return;
+		}
+		let message = {}
+		let message_id = get_new_message_id();
+		let message_creationDate = moment().format('DD-MM-YYYY');
+		let message_text = text;
+		let message_sender_id = 0;
+		g_users.forEach(user => {
+			//create post details
+			let message_recipient_id = user.id;
+			//add message
+			const new_message = { 	message_id: message_id , 
+								sender_id: message_sender_id, 
+								recipient_id: message_recipient_id,
+								creation_date: message_creationDate,
+								text: message_text	} ;
+			g_posts.push( new_message);
+			
+			console.log(`user ${user.id} got message`);	
+			if(message_recipient_id = g_users[g_users.length-1].id)
+			{
+				message = new_message;
+			}
+		});
+		//		res.send(  JSON.stringify(message)); 
+		//	+ `sent successfully to ${g_users.length -1}`) );  
+	}
+	res.send(  JSON.stringify(`sent successfully to ${g_users.length} users`)); 
+}
+
+function get_new_message_id()
+{
+	let max_id = 0;
+	g_messages.forEach(
+		item => { max_id = Math.max( max_id, item.id) }
+	)
+
+	return max_id + 1;
 }

@@ -1,1 +1,20 @@
-[{"id":1,"name":"Root admin","email":"admin@gmail.com","password":"$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A","token":"","status":"active"}]
+[{"id":1,"name":"Root admin","email":"admin@gmail.com","password":"$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A","token":"","status":"active"},
+  {
+        "id": 2,
+        "name": "eliya n",
+        "email": "eliya@gmail.com",
+        "password": "$argon2i$v=19$m=4096,t=3,p=1$jkfTD7+iVw/wpGBrq9MMKQ$c/crGDf/oUpPklFWbGeHAv4p5z74L4FJOYLxJjt+AS4",
+        "creation_date": "20-12-2021",
+        "status": "created"
+    },
+
+
+{
+    "id": 3,
+    "name": "almog g",
+    "email": "almog@gmail.com",
+    "password": "$argon2i$v=19$m=4096,t=3,p=1$FHuHKah+EAqqwwaV7xAC2Q$flvyUYbu2fBtrZk8hXagnZqTZvL7vJ9DPymiMJWQCzI",
+    "creation_date": "20-12-2021",
+    "status": "created"
+}
+]

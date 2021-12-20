@@ -3,7 +3,7 @@
   "version": "0.0.001",
   "description": "JavaScript Course API",
   "main": "users.js",
-  "author": {
+  "authors": {
     "name": "Eliya Netanel, Almog Geva"
   },
   "scripts": {
