@@ -50,6 +50,7 @@ router.post('/users', users.create_user )
 router.put('/user/(:id)',  users.update_user)
 router.get('/user/(:id)',  users.get_user)
 router.post('/user/login',  users.login_user)
+router.post('/user/logout',  users.logout_user)
 //only admin
 router.get('/users', users.list_users )
 router.delete('/user/(:id)',  users.delete_user)

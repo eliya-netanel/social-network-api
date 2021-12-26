@@ -392,3 +392,27 @@ exports.login_user = function ( req, res )
 	}
 }
 
+exports.logout_user = function (req,res)
+{
+	console.log("in logout func");
+	const token = req.body.token;
+
+	if (!token)
+	{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send("Missing token in request")
+		return "no token";
+	}
+	const user =  g_users.find( user =>  user.token == token )
+	if ( !user)
+	{
+		res.status( StatusCodes.NOT_FOUND );
+		res.send( "No such user")
+		return;
+	}
+  
+	user.token = "";
+	res.status( StatusCodes.OK);
+	res.send(`logged out ${user.name}`);
+}
+
