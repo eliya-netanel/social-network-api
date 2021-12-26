@@ -88,6 +88,12 @@ exports.find_user_by_token = function ( req, res )
 {
 	const token = req.body.token;
 
+	if (!token)
+	{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send("Missing token in request")
+		return "no token";
+	}
 	const user =  g_users.find( user =>  user.token == token )
 	if ( !user)
 	{
@@ -100,7 +106,6 @@ exports.find_user_by_token = function ( req, res )
 
 exports.find_user_by_id = function ( req, res )
 {
-	//const token = req.body.token;
 	const id =  parseInt( req.params.id );
 
 	if ( id <= 0)
