@@ -8,64 +8,69 @@ const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
 
+var posts = require('./posts');
+var messages = require('./messages')
+var users = require('./users')
+var db = require('./DB');
+
 
 const app = express();
-const status_enum = Object.freeze( {
-	created : "created",
-	active : "active",
-	suspended: "suspended",
-	deleted : "deleted"
-});
+// const status_enum = Object.freeze( {
+// 	created : "created",
+// 	active : "active",
+// 	suspended: "suspended",
+// 	deleted : "deleted"
+// });
 let  port = 5001;
-const dbDir =   path.join(__dirname , '/database');
-const usersDBFile =  path.join(dbDir , '/users.json');
-const postsDBFile =  path.join(dbDir , '/posts.json');
-const messagesDBDir =  path.join(dbDir , '/messages');
+// const dbDir =   path.join(__dirname , '/database');
+// const usersDBFile =  path.join(dbDir , '/users.json');
+// const postsDBFile =  path.join(dbDir , '/posts.json');
+// const messagesDBDir =  path.join(dbDir , '/messages');
 
 
-async function get_data()
-{
-	fs.mkdir(dbDir, {recursive: true }, ()=> { console.log(`Created a folder at:${dbDir}`);} );
-	fs.mkdir(messagesDBDir,{recursive : true},()=> { console.log(`Created a folder at:${messagesDBDir}`);} );
+// async function get_data()
+// {
+// 	fs.mkdir(dbDir, {recursive: true }, ()=> { console.log(`Created a folder at:${dbDir}`);} );
+// 	fs.mkdir(messagesDBDir,{recursive : true},()=> { console.log(`Created a folder at:${messagesDBDir}`);} );
 
-	fs.readFile(usersDBFile, (err,fd)=> {
-			//console.log(fd);	
+// 	fs.readFile(usersDBFile, (err,fd)=> {
+// 			//console.log(fd);	
 			
-			if(err) // file doesnt exist
-			{
-				fs.writeFile(usersDBFile, JSON.stringify(g_users), ()=> {console.log("Creating File")} );
-			}
-			else
-			{
-				try{				
-					g_users = JSON.parse(fd)
-				}
-				catch(e){
-					console.log("failed to parse usersDB.json", e);
-				}
-			}
-		} );
+// 			if(err) // file doesnt exist
+// 			{
+// 				fs.writeFile(usersDBFile, JSON.stringify(db.users_list), ()=> {console.log("Creating File")} );
+// 			}
+// 			else
+// 			{
+// 				try{				
+// 					db.users_list = JSON.parse(fd)
+// 				}
+// 				catch(e){
+// 					console.log("failed to parse usersDB.json", e);
+// 				}
+// 			}
+// 		} );
 
-	// fs.open(usersDBFile, 'r' , (err,fd)=> {
-	// 	console.log(fd);	
+// 	// fs.open(usersDBFile, 'r' , (err,fd)=> {
+// 	// 	console.log(fd);	
 		
-	// 	if(err) // file doesnt exist
-	// 	{
-	// 		fs.writeFile(usersDBFile, JSON.stringify(g_users), ()=> {console.log("Creating File")} );
-	// 	}
-	// 	else
-	// 	{
-	// 		try{				
-	// 			g_users = JSON.parse(fd)
-	// 		}
-	// 		catch(e){
-	// 			console.log("failed to parse usersDB.json", e);
-	// 		}
-	// 	}
-	// } );
+// 	// 	if(err) // file doesnt exist
+// 	// 	{
+// 	// 		fs.writeFile(usersDBFile, JSON.stringify(db.users_list), ()=> {console.log("Creating File")} );
+// 	// 	}
+// 	// 	else
+// 	// 	{
+// 	// 		try{				
+// 	// 			db.users_list = JSON.parse(fd)
+// 	// 		}
+// 	// 		catch(e){
+// 	// 			console.log("failed to parse usersDB.json", e);
+// 	// 		}
+// 	// 	}
+// 	// } );
 	
-	//same for Posts & messages
-}
+// 	//same for Posts & messages
+// }
 
 
 
@@ -85,17 +90,17 @@ app.use(express.urlencoded( // to support URL-encoded bodies
 
 
 
-// User's table
-let g_users = [ {id:1, 
-				name: 'Root admin',
- 				email:"admin@gmail.com",
-				password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
-				token: "",
-				status: "active"
-				} ];
+// // User's table
+// let db.users_list = [ {id:1, 
+// 				name: 'Root admin',
+//  				email:"admin@gmail.com",
+// 				password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
+// 				token: "",
+// 				status: "active"
+// 				} ];
  				
-const g_posts = [ ];
-const g_messages = [ ];
+// // const g_posts = [ ];
+// //const g_messages = [ ];
 
 
 // API functions
@@ -108,335 +113,48 @@ function get_version( req, res)
 }
 
 
-async function list_users( req, res) 
-{
-	let check = await authenticate_admin(req, res);
-	if(check == "admin"){
-		res.send(  JSON.stringify( g_users) );   
-	}
-}
-
-
-function authenticate_admin(req,res){
-	const token = req.body.token;
-
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send("Missing token in request")
-		return "no token";
-	}
-	if(token != g_users[0].token){
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Only admin can access")
-		return "not admin";
-	}
-	else{
-		return "admin";
-	}
-}
-
-function get_user( req, res )
-{
-	const id =  parseInt( req.params.id );
-
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
-
-	const user =  g_users.find( user =>  user.id == id )
-	if ( !user)
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-
-	res.send(  JSON.stringify( user) );   
-}
-
-async function delete_user( req, res )
-{
-	let check = await authenticate_admin(req, res);
-	if(check == "admin")
-	{
-		const id =  parseInt( req.params.id );
-
-		if ( id <= 0)
-		{
-			res.status( StatusCodes.BAD_REQUEST );
-			res.send( "Bad id given")
-			return;
-		}
-
-		if ( id == 1)
-		{
-			res.status( StatusCodes.FORBIDDEN ); // Forbidden
-			res.send( "Can't delete root user")
-			return;		
-		}
-
-		const idx =  g_users.findIndex( user =>  user.id == id )
-		if ( idx < 0 )
-		{
-			res.status( StatusCodes.NOT_FOUND );
-			res.send( "No such user")
-			return;
-		}
-		g_users.splice( idx, 1 )
-		res.send(  JSON.stringify( {}) );   
-	}
-}
-
-async function create_user( req, res )
-{
-	const name = req.body.name;
-	const email = req.body.email;
-	const password = req.body.password;
-
-	if (!name)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing name in request")
-		return;
-	}
-
-	const twoWordRegex = /[a-zA-Z]+\s+[a-zA-Z]+/g;
-	if(!twoWordRegex.test(name))
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing First or Last name");
-		return;
-	}
-
-	if (!email)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing email in request")
-		return;
-	}
-
-	const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-	if(!emailRegex.test(email))
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Email not formatted correctly");
-		return;
-	}
-
-	if (!password)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing password in request")
-		return;
-	}
-
-	//create user details
-	let user_id = get_new_user_id();
-	let user_hashedpassword = await argon2Async(password);
-	let user_creationDate = moment().format('DD-MM-YYYY');
-	let user_status = status_enum.created;
-
-	//add user
-	const new_user = { 	id: user_id , 
-						name: name, 
-						email: email, 
-						password : user_hashedpassword,
-						creation_date: user_creationDate,
-						status: user_status	} ;
-	g_users.push( new_user  );
-	
-	res.send(  JSON.stringify( new_user) );   
-}
-
-
-async function argon2Async( prehashedPassword)
-{	
-	hashPromise = argon2.hash(prehashedPassword);
-	return hashPromise;
-}
-
-
-function update_user( req, res )
-{
-	const id =  parseInt( req.params.id );
-
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
-
-	const idx =  g_users.findIndex( user =>  user.id == id )
-	if ( idx < 0 )
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-
-	const name = req.body.name;
-
-	if ( !name)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing name in request")
-		return;
-	}
-
-	const user = g_users[idx];
-	user.name = name;
-
-	res.send(  JSON.stringify( {user}) );   
-}
-
-
-async function update_user_state( req, res )
-{
-	let check = await authenticate_admin(req, res);
-	if(check == "admin")
-	{
-		const id =  parseInt( req.params.id );
-		const new_status = req.body.status;
-
-		if ( id <= 0)
-		{
-			res.status( StatusCodes.BAD_REQUEST );
-			res.send( "Bad id given")
-			return;
-		}
-		if ( id == 1)
-		{
-			res.status( StatusCodes.FORBIDDEN ); // Forbidden
-			res.send( "Can't update root user")
-			return;		
-		}
-
-		const idx =  g_users.findIndex( user =>  user.id == id )
-		if ( idx < 0 )
-		{
-			res.status( StatusCodes.NOT_FOUND );
-			res.send( "No such user")
-			return;
-		}
-		else // found id && not root 
-		{
-			const user = g_users[idx];
-
-			let user_status;// = status_enum.created;
-			switch(new_status){
-				case "approve":
-					user.status = status_enum.active;
-				break;
-				case "suspend":
-					user.status = status_enum.suspended;
-				break;
-				case "restore":
-					user.status = status_enum.active;
-				break
-				default:
-					res.status( StatusCodes.NOT_FOUND );
-					res.send( "Not a valid status")
-					return;
-			}
-			res.send(  JSON.stringify( {user}) );   
-		}
-	}
-}
-
-
-function login_user( req, res )
-{
-	console.log("logging in user...");
-
-	const email = req.body.email;
-	const password = req.body.password;
-
-	if (!email)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing email in request")
-		return;
-	}
-	if (!password)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing password in request")
-		return;
-	}
-
-	const user = g_users.find(( curr_user ) => email === curr_user.email)
-	if (user != undefined)
-	{
-		console.log("found user");
-		//check password
-		const check_pass = argon2.verify(user.password, password).catch(() => {
-			throw new Error('Something went wrong. Please try again.')
-		   })
-		   .then(match => {
-			if (match) {
-				const authentication_key = uuid.v4();
-				if(user.id == 1){
-					console.log("logged in as admin");
-					//to check later if admin- to delete etc...
-					//admin_key = authentication_key;
-				}
-				else{
-					console.log("logged in");
-				}
-				user.token = authentication_key;
-			 	res.send(JSON.stringify(authentication_key)); 
-			}
-			else{
-				res.status( StatusCodes.BAD_REQUEST);
-				res.send("Wrong password");
-			}})
-
-	}
-	else{
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("Couldn't find user")
-	}
-}
-
-function get_new_user_id()
-{
-	let max_id = 0;
-	g_users.forEach(
-		item => { max_id = Math.max( max_id, item.id) }
-	)
-
-	return max_id + 1;
-}
 
 // Routing
 const router = express.Router();
 
 //user routs
 router.get('/version', (req, res) => { get_version(req, res )  } )
-router.post('/users', (req, res) => { create_user(req, res )  } )
-router.put('/user/(:id)', (req, res) => { update_user(req, res )  } )
-router.get('/user/(:id)', (req, res) => { get_user(req, res )  })
+// router.post('/users', (req, res) => { create_user(req, res )  } )
+// router.put('/user/(:id)', (req, res) => { update_user(req, res )  } )
+// router.get('/user/(:id)', (req, res) => { get_user(req, res )  })
 
-router.post('/user/login', (req, res) => { login_user(req, res )  })
+// router.post('/user/login', (req, res) => { login_user(req, res )  })
+// //only admin
+// router.get('/users', (req, res) => { list_users(req, res )  } )
+// router.delete('/user/(:id)', (req, res) => { delete_user(req, res )  })
+// router.put('/user/state/(:id)', (req, res) => { update_user_state(req, res )  } )
+router.post('/users', users.create_user )
+router.put('/user/(:id)',  users.update_user)
+router.get('/user/(:id)',  users.get_user)
+
+router.post('/user/login',  users.login_user)
 //only admin
-router.get('/users', (req, res) => { list_users(req, res )  } )
-router.delete('/user/(:id)', (req, res) => { delete_user(req, res )  })
-router.put('/user/state/(:id)', (req, res) => { update_user_state(req, res )  } )
+router.get('/users', users.list_users )
+router.delete('/user/(:id)',  users.delete_user)
+router.put('/user/state/(:id)', users.update_user_state )
+
+
+
+
 
 //posts routs
-router.post('/posts', (req, res) => { create_post(req, res )  } )
-router.get('/posts', (req, res) => { get_posts(req, res )  } )
-router.delete('/post/(:id)', (req, res) => { delete_post(req, res )  } )
+router.post('/posts', posts.create_post )
+router.get('/posts', posts.get_posts )
+router.delete('/post/(:id)', posts.delete_post )
 
 //messagesRouts
-router.post('/message/(:id)', (req, res) => { send_message(req, res )  } )
-router.post('/messages', (req, res) => { send_messages(req, res )  } )
-router.get('/messages', (req, res) => { get_messages(req, res )  } )
+// router.post('/message/(:id)', (req, res) => { send_message(req, res )  } )
+// router.post('/messages', (req, res) => { send_messages(req, res )  } )
+// router.get('/messages/(:id)', (req, res) => { get_messages(req, res )  } )
+router.post('/message/(:id)', messages.send_message)
+router.post('/messages',  messages.send_messages)
+router.get('/messages/(:id)', messages.get_messages )
+
 
 
 
@@ -446,268 +164,7 @@ app.use('/api',router)
 
 
 // Init 
-get_data();
+db.get_data;
 let msg = `${package.description} listening at port ${port}`
 app.listen(port, () => { console.log( msg ) ; })
 
-
-//// posts
-
-function create_post( req, res )
-{
-	const token = req.body.token;
-	const text = req.body.text;
-
-	if (!text)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing text in request")
-		return;
-	}
-
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing token in request")
-		return;
-	}
-
-	//find user
-	const user = g_users.find(( curr_user ) => token === curr_user.token)
-	if(user == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("Couldn't find user with key")
-		return
-	}
-	if(user.status != status_enum.active){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("only active user can post")
-		return
-	}
-	//create post details
-	let post_id = get_new_post_id();
-	let post_creationDate = moment().format('DD-MM-YYYY');
-	let post_text = text;
-	let post_creator_id = user.id;
-
-	//add post
-	const new_post = { 	id: post_id , 
-						creator_id: post_creator_id, 
-						creation_date: post_creationDate,
-						text: post_text	} ;
-	g_posts.push( new_post);
-	
-	res.send(  JSON.stringify( new_post) );   
-}
-
-function get_new_post_id()
-{
-	let max_id = 0;
-	g_posts.forEach(
-		item => { max_id = Math.max( max_id, item.id) }
-	)
-
-	return max_id + 1;
-}
-
-function get_posts( req, res) 
-{
-	res.send(  JSON.stringify( g_posts) );   
-}
-
-function delete_post( req, res )
-{
-	const token = req.body.token;
-	const id =  parseInt( req.params.id );
-	if (!id)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing id in request")
-		return;
-	}
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
-
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing token in request")
-		return;
-	}
-
-	//find post
-	const post = g_posts.find((curr_post) => id === curr_post.id)
-	if(post == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("Couldn't find post with id")
-		return
-	}
-	//find user
-	const user = g_users.find(( curr_user ) => token === curr_user.token)
-	if(user == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("no user with key")
-		return
-	}
-	if(user.id != post.creator_id && user.id != 1){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("only creator can delets post")
-		return
-	}
-	g_posts.splice( post.id, 1 )
-	res.send(  JSON.stringify( `deleted post with id ${id}`) );   
-}
-
-//messages
-function send_message( req, res )
-{
-	const id =  parseInt( req.params.id );
-	const token = req.body.token;
-	const text = req.body.text;
-
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
-
-	const idx =  g_users.findIndex( user =>  user.id == id )
-	if ( idx < 0 )
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-
-	if (!text)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing text in request")
-		return;
-	}
-
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing token in request")
-		return;
-	}
-
-	//find sender 
-	const sender = g_users.find(( curr_user ) => token === curr_user.token)
-	if(sender == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("Couldn't find user with key")
-		return
-	}
-	
-	//create post details
-	let message_id = g_messages.length+1;
-	let message_creationDate = moment().format('DD-MM-YYYY');
-	let message_text = text;
-	let message_sender_id = sender.id;
-	let message_recipient_id = id;
-
-	//add message
-	const new_message = { 	message_id: message_id , 
-						sender_id: message_sender_id, 
-						recipient_id: message_recipient_id,
-						creation_date: message_creationDate,
-						text: message_text	} ;
-	g_messages.push( new_message);
-	
-	res.send(  JSON.stringify( new_message) );   
-}
-
-async function send_messages(req, res) {
-	let check = await authenticate_admin(req, res);
-	if(check == "admin"){
-		const text = req.body.text;
-
-		if (!text)
-		{
-			res.status( StatusCodes.BAD_REQUEST );
-			res.send( "Missing text in request")
-			return;
-		}
-		//let message = {}
-		let message_creationDate = moment().format('DD-MM-YYYY');
-		let message_text = text;
-		let message_sender_id = 0;
-		g_users.forEach(user => {
-			//create message details
-			let message_id = g_messages.length;
-			let message_recipient_id = user.id;
-			//add message
-			const new_message = { 	message_id: message_id , 
-								sender_id: message_sender_id, 
-								recipient_id: message_recipient_id,
-								creation_date: message_creationDate,
-								text: message_text	} ;
-			g_messages.push( new_message);
-			
-			console.log(`user ${user.id} got message`);	
-			// if(message_recipient_id = g_users[g_users.length-1].id)
-			// {
-			// 	message = new_message;
-			// }
-		});
-		//		res.send(  JSON.stringify(message)); 
-		//	+ `sent successfully to ${g_users.length -1}`) );  
-	}
-	res.send(  JSON.stringify(`sent successfully to ${g_users.length} users`)); 
-}
-
-function get_new_message_id()
-{
-	let max_id = 0;
-	g_messages.forEach(
-		item => { max_id = Math.max( max_id, item.id) }
-	)
-
-	return max_id + 1;
-}
-
-function get_messages(req,res){
-	const token = req.body.token;
-	// if (!id)
-	// {
-	// 	res.status( StatusCodes.BAD_REQUEST );
-	// 	res.send( "Missing id in request")
-	// 	return;
-	// }
-	// if ( id <= 0)
-	// {
-	// 	res.status( StatusCodes.BAD_REQUEST );
-	// 	res.send( "Bad id given")
-	// 	return;
-	// }
-
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing token in request")
-		return;
-	}
-
-	//find user
-	const user = g_users.find(( curr_user ) => token === curr_user.token)
-	if(user == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("no user with key")
-		return
-	}
-	// if(user.token != token){
-	// 	res.status( StatusCodes.BAD_REQUEST);
-	// 	res.send("only recipient can see mmesages")
-	// 	return
-	// }
-
-	const filtered = g_messages.filter(message => user.id == message.recipient_id);
-	res.send(  JSON.stringify( filtered) );   
-}
