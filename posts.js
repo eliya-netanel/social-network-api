@@ -64,6 +64,8 @@ exports.create_post = function(req, res)
 
 exports.get_posts = function ( req, res) 
 {
+	const user = users.find_user_by_token(req,res);
+
 	const display = g_posts.filter(post => post.status != status_enum.deleted);
 	res.send(  JSON.stringify(display) );   
 }

@@ -163,6 +163,8 @@ exports.get_messages = function (req,res){
 exports.send_activation_msg = function(req,res){
 	const user = users.find_user_by_id(req,res);
 
+	if(user){
+
 	let message_id = g_messages.length+1;
 	let message_creationDate = moment().format('DD-MM-YYYY');
 	let message_text = "please make me an active user";
@@ -178,4 +180,4 @@ exports.send_activation_msg = function(req,res){
 	g_messages.push( new_message);
 	
 	res.send(  JSON.stringify( new_message) );
-}
+}}

@@ -54,7 +54,7 @@ function auth_admin(req,res){
 		return "no token";
 	}
 	if(token != g_users[0].token){
-		res.status( StatusCodes.BAD_REQUEST );
+		res.status( StatusCodes.UNAUTHORIZED );
 		res.send( "Only admin can access")
 		return "not admin";
 	}
