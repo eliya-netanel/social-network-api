@@ -20,9 +20,6 @@ const status_enum = Object.freeze( {
 });
 
 
-//// posts
-//export const create_post = async (req, res) => 
-//export async function create_post( req, res )
 exports.create_post = function(req, res)
 {
 	const token = req.body.token;
@@ -44,16 +41,6 @@ exports.create_post = function(req, res)
 
 	// //find user
 	const user = users.find_user_by_token(req, res);
-
-	//if(!user){}
-
-
-	// const user = db.users_list.find(( curr_user ) => token === curr_user.token)
-	// if(user == undefined){
-	// 	res.status( StatusCodes.BAD_REQUEST);
-	// 	res.send("Couldn't find user with key")
-	// 	return
-	// }
 	if(user.status != status_enum.active){
 		res.status( StatusCodes.BAD_REQUEST);
 		res.send("only active user can post")
@@ -114,9 +101,6 @@ exports.delete_post = function ( req, res )
 	}
 	//find user
 	const user = users.find_user_by_token(req,res);
-
-
-	//const user =g_posts.find(( curr_user ) => token === curr_user.token)
 	if(user == undefined){
 		res.status( StatusCodes.BAD_REQUEST);
 		res.send("no user with key")
@@ -127,9 +111,6 @@ exports.delete_post = function ( req, res )
 		res.send("only creator can delets post")
 		return
 	}
-
-	//todo - not actualy delete - just display without
-	//g_posts.splice( post.id, 1 )
 	post.status = status_enum.deleted;
 	res.send(  JSON.stringify( `deleted post with id ${id}`) );   
 }

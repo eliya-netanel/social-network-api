@@ -12,6 +12,12 @@ const usersDBFile =  path.join(dbDir , '/users.json');
 const postsDBFile =  path.join(dbDir , '/posts.json');
 const messagesDBDir =  path.join(dbDir , '/messages');
 
+// const dbDir =   path.join(__dirname , '/database');
+// const usersDBFile =  path.join(dbDir , '/users.json');
+// const postsDBFile =  path.join(dbDir , '/posts.json');
+// const messagesDBDir =  path.join(dbDir , '/messages');
+
+
 const status_enum = Object.freeze( {
 	created : "created",
 	active : "active",
@@ -65,31 +71,3 @@ exports.get_data = async function ()
 
 
 
-// User's table
-// let g_users = [ {id:1, 
-//     name: 'Root admin',
-//      email:"admin@gmail.com",
-//     password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
-//     token: "",
-//     status: "active"
-// } ];
-     
-// exports.users_list = function(req, res){
-//       //  res.render('users', { title: 'Users', users: users });
-//     return g_users;  
-//     };    
-
-//     exports.posts_list = function(req, res){
-//         return g_posts;
-//     };   
-
-//     exports.messages_list = function(req, res){
-//         return g_messages;
-//     };   
-
-// const g_posts = [ ];
-// const g_messages = [ ];
-
-exports.status_enum_list = function(req, res){
-	        return status_enum;
-	    };  

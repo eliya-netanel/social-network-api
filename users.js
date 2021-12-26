@@ -27,11 +27,10 @@ let g_users = [ {id:1,
 
 exports.list_users = async function ( req, res) 
 {
-	let check = auth_admin( req, res) ;
+	let check = await auth_admin( req, res) ;
 	if(check == "admin"){
 		const display = g_users.filter(user => user.status != status_enum.deleted);
 		res.send(  JSON.stringify(display) );   
-		//res.send(  JSON.stringify( g_users) );   
 	}
 }
 
@@ -39,10 +38,12 @@ exports.get_not_deleted_users = function() {
 	return g_users.filter(user => user.status != status_enum.deleted); 
 }
 
+//for outside use - calls the inner func
 exports.authenticate_admin = function (req,res){
 	auth_admin(req,res);
 }
-//authenticate_admin = function (req,res){
+
+//for inner file use
 function auth_admin(req,res){	
 	const token = req.body.token;
 
@@ -63,6 +64,28 @@ function auth_admin(req,res){
 }
 
 exports.get_user = function ( req, res )
+{
+	const id =  parseInt( req.params.id );
+
+	if ( id <= 0)
+	{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send( "Bad id given")
+		return;
+	}
+
+	const user =  g_users.find( user =>  user.id == id )
+	if ( !user)
+	{
+		res.status( StatusCodes.NOT_FOUND );
+		res.send( "No such user")
+		return;
+	}
+
+	res.send(  JSON.stringify( user) );
+}
+
+exports.ask_to_activate = function ( req, res )
 {
 	const id =  parseInt( req.params.id );
 
@@ -153,7 +176,6 @@ exports.delete_user = async function ( req, res )
 			res.send( "No such user")
 			return;
 		}
-		//g_users.splice( idx, 1 )
 		user.status = status_enum.deleted;
 		res.send(  JSON.stringify( `deleted user with id ${id}` ) );   
 	}
@@ -203,7 +225,7 @@ exports.create_user = async function ( req, res )
 	}
 
 	//create user details
-	let user_id = get_new_user_id();
+	let user_id = g_users.length +1 ;
 	let user_hashedpassword = await argon2Async(password);
 	let user_creationDate = moment().format('DD-MM-YYYY');
 	let user_status = status_enum.created;
@@ -296,7 +318,7 @@ exports.update_user_state = async function ( req, res )
 		{
 			const user = g_users[idx];
 
-			let user_status;// = status_enum.created;
+			let user_status;
 			switch(new_status){
 				case "approve":
 					user.status = status_enum.active;
@@ -351,7 +373,6 @@ exports.login_user = function ( req, res )
 				const authentication_key = uuid.v4();
 				if(user.id == 1){
 					console.log("logged in as admin");
-					//to check later if admin- to delete etc...
 				}
 				else{
 					console.log("logged in");
@@ -371,12 +392,3 @@ exports.login_user = function ( req, res )
 	}
 }
 
-function get_new_user_id()
-{
-	let max_id = 0;
-	g_users.forEach(
-		item => { max_id = Math.max( max_id, item.id) }
-	)
-
-	return max_id + 1;
-}

@@ -81,7 +81,6 @@ exports.send_message = function ( req, res )
 
 exports.send_messages = async function (req, res) {
 
-    //problem??
 	let check = users.authenticate_admin(req, res);
 	const num_of_recipients = 0;
 	if(check == "admin"){
@@ -93,7 +92,6 @@ exports.send_messages = async function (req, res) {
 			res.send( "Missing text in request")
 			return;
 		}
-		//let message = {}
 		let message_creationDate = moment().format('DD-MM-YYYY');
 		let message_text = text;
 		let message_sender_id = 0;
@@ -114,27 +112,12 @@ exports.send_messages = async function (req, res) {
 			g_messages.push( new_message);
 			
 			console.log(`user ${user.id} got message`);	
-			// if(message_recipient_id = g_users[g_users.length-1].id)
-			// {
-			// 	message = new_message;
-			// }
+			
 		});
 		num_of_recipients = g_users.length;
-		//		res.send(  JSON.stringify(message)); 
-		//	+ `sent successfully to ${g_users.length -1}`) );  
 	}
 	res.send(  JSON.stringify(`sent successfully to ${num_of_recipients} users`)); 
 }
-
-// function get_new_message_id()
-// {
-// 	let max_id = 0;
-// 	g_messages.forEach(
-// 		item => { max_id = Math.max( max_id, item.id) }
-// 	)
-
-// 	return max_id + 1;
-// }
 
 exports.get_messages = function (req,res){
 	const token = req.body.token;
@@ -162,7 +145,6 @@ exports.get_messages = function (req,res){
 
 	//find user
 	const user = users.find_user_by_token(req,res);
-	//const user = g_users.find(( curr_user ) => token === curr_user.token)
 	if(user == undefined){
 		res.status( StatusCodes.BAD_REQUEST);
 		res.send("no user with key")
