@@ -177,3 +177,23 @@ exports.get_messages = function (req,res){
 	const filtered = g_messages.filter(message => user.id == message.recipient_id);
 	res.send(  JSON.stringify( filtered) );   
 }
+
+exports.send_activation_msg = function(req,res){
+	const user = users.find_user_by_id(req,res);
+
+	let message_id = g_messages.length+1;
+	let message_creationDate = moment().format('DD-MM-YYYY');
+	let message_text = "please make me an active user";
+	let message_sender_id = user.id;
+	let message_recipient_id = 1;
+
+	//add message
+	const new_message = { 	message_id: message_id , 
+						sender_id: message_sender_id, 
+						recipient_id: message_recipient_id,
+						creation_date: message_creationDate,
+						text: message_text	} ;
+	g_messages.push( new_message);
+	
+	res.send(  JSON.stringify( new_message) );
+}

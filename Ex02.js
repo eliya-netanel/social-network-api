@@ -153,6 +153,7 @@ router.delete('/post/(:id)', posts.delete_post )
 // router.get('/messages/(:id)', (req, res) => { get_messages(req, res )  } )
 router.post('/message/(:id)', messages.send_message)
 router.post('/messages',  messages.send_messages)
+router.post('/messages/active/(:id)',  messages.send_activation_msg)
 router.get('/messages/(:id)', messages.get_messages )
 
 
