@@ -8,10 +8,11 @@ const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
 
+//internal modules
 var posts = require('./posts');
 var messages = require('./messages')
 var users = require('./users')
-//var db = require('./DB');
+var db = require('./DB');
 
 
 const app = express();
@@ -70,8 +71,9 @@ router.get('/messages/(:id)', messages.get_messages )
 
 app.use('/api',router)
 
-// Init 
-//db.get_data;
+// Init Serverr
+
+db.createDataBase();
 let msg = `${package.description} listening at port ${port}`
 app.listen(port, () => { console.log( msg ) ; })
 

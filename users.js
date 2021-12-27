@@ -6,6 +6,7 @@ const argon2 = require("argon2"); // for hashing
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
+var db = require('./DB');
 
 const status_enum = Object.freeze( {
 	created : "created",
@@ -14,15 +15,18 @@ const status_enum = Object.freeze( {
 	deleted : "deleted"
 });
 
-var db = require('./DB');
 
-let g_users = [ {id:1, 
-    name: 'Root admin',
-    email:"admin@gmail.com",
-    password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
-    token: "",
-    status: "active"
-} ];
+
+let g_users = db.getUsers();
+// let g_users = 
+// [ {	
+// 	id:1, 
+//     name: 'Root admin',
+//     email:"admin@gmail.com",
+//     password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
+//     token: "",
+//     status: "active"
+// } ];
 
 
 exports.list_users = async function ( req, res) 
@@ -177,7 +181,11 @@ exports.delete_user = async function ( req, res )
 			return;
 		}
 		user.status = status_enum.deleted;
+		
+		updateDbPromise = db.updateUser(user);
 		res.send(  JSON.stringify( `deleted user with id ${id}` ) );   
+
+		await updateDbPromise;
 	}
 }
 
@@ -239,7 +247,10 @@ exports.create_user = async function ( req, res )
 						status: user_status	} ;
 	g_users.push( new_user  );
 	
+	addToDbPromise = db.addUserToDB(new_user);
 	res.send(  JSON.stringify( new_user) );   
+
+	await addToDbPromise;
 }
 
 
@@ -282,7 +293,10 @@ exports.update_user = function ( req, res )
 	const user = g_users[idx];
 	user.name = name;
 
-	res.send(  JSON.stringify( {user}) );   
+	updateDbPromise = db.updateUser(user);
+	res.send(  JSON.stringify( {user}) );
+	
+	await updateDbPromise;
 }
 
 
@@ -334,7 +348,11 @@ exports.update_user_state = async function ( req, res )
 					res.send( "Not a valid status")
 					return;
 			}
-			res.send(  JSON.stringify( {user}) );   
+
+			updateDbPromise = db.updateUser(user);
+			res.send(  JSON.stringify( {user}) ); 
+			
+			await updateDbPromise;
 		}
 	}
 }
