@@ -16,7 +16,7 @@ const status_enum = Object.freeze( {
 });
 
 
-
+db.createDataBase();
 let g_users = db.getUsers();
 // let g_users = 
 // [ {	
@@ -182,10 +182,11 @@ exports.delete_user = async function ( req, res )
 		}
 		user.status = status_enum.deleted;
 		
-		updateDbPromise = db.updateUser(user);
+		//updateDbPromise = db.updateUser(user);
 		res.send(  JSON.stringify( `deleted user with id ${id}` ) );   
 
-		await updateDbPromise;
+		db.updateUser(user);
+		//await updateDbPromise;
 	}
 }
 
@@ -247,10 +248,11 @@ exports.create_user = async function ( req, res )
 						status: user_status	} ;
 	g_users.push( new_user  );
 	
-	addToDbPromise = db.addUserToDB(new_user);
+	//addToDbPromise = db.addUserToDB(new_user);
 	res.send(  JSON.stringify( new_user) );   
-
-	await addToDbPromise;
+	
+	db.addUserToDB(new_user);
+	//await addToDbPromise;
 }
 
 
@@ -293,10 +295,11 @@ exports.update_user = function ( req, res )
 	const user = g_users[idx];
 	user.name = name;
 
-	updateDbPromise = db.updateUser(user);
+	//updateDbPromise = db.updateUser(user);
 	res.send(  JSON.stringify( {user}) );
 	
-	await updateDbPromise;
+	db.updateUser(user);
+	//await updateDbPromise;
 }
 
 
@@ -349,10 +352,11 @@ exports.update_user_state = async function ( req, res )
 					return;
 			}
 
-			updateDbPromise = db.updateUser(user);
+			//updateDbPromise = db.updateUser(user);
 			res.send(  JSON.stringify( {user}) ); 
 			
-			await updateDbPromise;
+			db.updateUser(user);
+			//await updateDbPromise;
 		}
 	}
 }

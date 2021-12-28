@@ -13,7 +13,7 @@ const { Console } = require('console');
 const dbDir =   path.join(__dirname , '/database');
 const usersDBFile =  path.join(dbDir , '/users.json');
 const postsDBFile =  path.join(dbDir , '/posts.json');
-const messagesDBFile =  path.join(dbDir , '/messages.josn');
+const messagesDBFile =  path.join(dbDir , '/messages.json');
 
 
 const initialUser = 
@@ -29,7 +29,7 @@ const initialUser =
 exports.createDataBase = function()
 {
 	//if not exist : create database directories
-	fs.mkdir(dbDir, {recursive: true }, ()=> { console.log(`Created a folder at:${dbDir}`);} );
+	fs.mkdir(dbDir, {recursive: true } , (err) => { if(err){ console.log(err) }});
 	//fs.mkdir(messagesDBDir,{recursive : true},()=> { console.log(`Created a folder at:${messagesDBDir}`);} );
 
 	if(!fs.existsSync(usersDBFile))
@@ -57,7 +57,8 @@ exports.addUserToDB = async function(user)
 			//fileContent.push(userJson);
 			fileContent.push(user);
 
-			fs.writeFile(usersDBFile, JSON.stringify(fileContent));			
+			fs.writeFile(usersDBFile, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});	
+			console.log("added new user to file");		
 		}
 		else if(err){
 			console.log("Error: addUserToDB : ", err);
@@ -74,7 +75,7 @@ exports.addPostToDB = async function(post)
 			let fileContent = JSON.parse(data);
 			fileContent.push(post);
 
-			fs.writeFile(postsDBFile, JSON.stringify(fileContent));
+			fs.writeFile(postsDBFile, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});
 		}
 		else if(err){
 			console.log("Error: addPostToDB : ", err);
@@ -91,7 +92,7 @@ exports.addMessageToDB = async function(message)
 			let fileContent = JSON.parse(data);
 			fileContent.push(message);
 
-			fs.writeFile(messagesDBFile, JSON.stringify(fileContent));
+			fs.writeFile(messagesDBFile, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});
 		}
 		else if(err){
 			console.log("Error: addMeesageToDB : ", err);
@@ -114,7 +115,7 @@ exports.getMessages = function()
 	return fileContent = JSON.parse(fs.readFileSync(messagesDBFile));
 }
 
-exports.updateUser() = async function(user)
+exports.updateUser = async function(user)
 {
 	fs.readFile(usersDBFile, (err,data) => {
 		if(data)
@@ -123,7 +124,7 @@ exports.updateUser() = async function(user)
 			index = users.findIndex( currUser => currUser.id == user.id );
 			users[index] = user;
 
-			await fs.writeFile(usersDBFile, JSON.stringify(users));
+			fs.writeFile(usersDBFile, JSON.stringify(users), (err) => { if(err){console.log(err);}});
 		}
 		else if(err)
 		{
@@ -131,6 +132,5 @@ exports.updateUser() = async function(user)
 		}
 	})
 }
-
 
 
