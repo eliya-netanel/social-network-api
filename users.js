@@ -6,7 +6,6 @@ const argon2 = require("argon2"); // for hashing
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
-var db = require('./DB');
 
 const status_enum = Object.freeze( {
 	created : "created",
@@ -15,18 +14,15 @@ const status_enum = Object.freeze( {
 	deleted : "deleted"
 });
 
+var db = require('./DB');
 
-db.createDataBase();
-let g_users = db.getUsers();
-// let g_users = 
-// [ {	
-// 	id:1, 
-//     name: 'Root admin',
-//     email:"admin@gmail.com",
-//     password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
-//     token: "",
-//     status: "active"
-// } ];
+let g_users = [ {id:1, 
+    name: 'Root admin',
+    email:"admin@gmail.com",
+    password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
+    token: "",
+    status: "active"
+} ];
 
 
 exports.list_users = async function ( req, res) 
@@ -44,15 +40,20 @@ exports.get_not_deleted_users = function() {
 
 //for outside use - calls the inner func
 exports.authenticate_admin = function (req,res){
-	auth_admin(req,res);
+	return auth_admin(req,res);
 }
 
 //for inner file use
 function auth_admin(req,res){	
+	//console.log(req.headers);
+	
+	//const
+	 //token = req.headers.authorization;
 	const token = req.body.token;
 
 	if (!token)
 	{
+
 		res.status( StatusCodes.BAD_REQUEST );
 		res.send("Missing token in request")
 		return "no token";
@@ -181,12 +182,7 @@ exports.delete_user = async function ( req, res )
 			return;
 		}
 		user.status = status_enum.deleted;
-		
-		//updateDbPromise = db.updateUser(user);
 		res.send(  JSON.stringify( `deleted user with id ${id}` ) );   
-
-		db.updateUser(user);
-		//await updateDbPromise;
 	}
 }
 
@@ -248,11 +244,7 @@ exports.create_user = async function ( req, res )
 						status: user_status	} ;
 	g_users.push( new_user  );
 	
-	//addToDbPromise = db.addUserToDB(new_user);
 	res.send(  JSON.stringify( new_user) );   
-	
-	db.addUserToDB(new_user);
-	//await addToDbPromise;
 }
 
 
@@ -295,11 +287,7 @@ exports.update_user = function ( req, res )
 	const user = g_users[idx];
 	user.name = name;
 
-	//updateDbPromise = db.updateUser(user);
-	res.send(  JSON.stringify( {user}) );
-	
-	db.updateUser(user);
-	//await updateDbPromise;
+	res.send(  JSON.stringify( {user}) );   
 }
 
 
@@ -351,12 +339,7 @@ exports.update_user_state = async function ( req, res )
 					res.send( "Not a valid status")
 					return;
 			}
-
-			//updateDbPromise = db.updateUser(user);
-			res.send(  JSON.stringify( {user}) ); 
-			
-			db.updateUser(user);
-			//await updateDbPromise;
+			res.send(  JSON.stringify( {user}) );   
 		}
 	}
 }

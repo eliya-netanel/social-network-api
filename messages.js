@@ -82,8 +82,10 @@ exports.send_message = function ( req, res )
 exports.send_messages = async function (req, res) {
 
 	let check = users.authenticate_admin(req, res);
-	const num_of_recipients = 0;
-	if(check == "admin"){
+
+	let num_of_recipients = 0;
+	if(check == "admin") {
+
 		const text = req.body.text;
 
 		if (!text)
