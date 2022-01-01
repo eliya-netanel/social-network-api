@@ -9,8 +9,10 @@ const moment = require('moment');
 
 var db = require('./DB');
 var users = require('./users');
-//var ex02 = require('./Ex02'); 
-const g_posts = [ ];
+//var ex02 = require('./Ex02');
+
+db.createDataBase();
+const g_posts = db.getPosts();
 
 const status_enum = Object.freeze( {
 	created : "created",
@@ -20,9 +22,21 @@ const status_enum = Object.freeze( {
 });
 
 
+function getTokenFromRequest(req){
+		
+	try{
+		return JSON.parse(req.headers.authorization).token;
+	}
+	catch{
+		return undefined;
+	}
+	
+}
+
 exports.create_post = function(req, res)
 {
-	const token = req.body.token;
+	const token = getTokenFromRequest(req);
+	
 	const text = req.body.text;
 
 	if (!text)
@@ -39,13 +53,14 @@ exports.create_post = function(req, res)
 		return;
 	}
 
-	// //find user
+	//find user
 	const user = users.find_user_by_token(req, res);
 	if(user.status != status_enum.active){
-		res.status( StatusCodes.BAD_REQUEST);
+		res.status( StatusCodes.UNAUTHORIZED);
 		res.send("only active user can post")
 		return
 	}
+
 	//create post details
 	let post_id = g_posts.length+1;
 	let post_creationDate = moment().format('DD-MM-YYYY');
@@ -59,20 +74,29 @@ exports.create_post = function(req, res)
 						text: post_text	} ;
 	g_posts.push( new_post);
 	
-	res.send(  JSON.stringify( new_post) );   
+	res.send(  JSON.stringify( new_post) );
+	
+	db.addPostToDB(new_post);
 }
 
 exports.get_posts = function ( req, res) 
 {
-	const user = users.find_user_by_token(req,res);
+	try{
+		const user = users.find_user_by_token(req,res);
 
-	const display = g_posts.filter(post => post.status != status_enum.deleted);
-	res.send(  JSON.stringify(display) );   
+		const display = g_posts.filter(post => post.status != status_enum.deleted);
+		res.send(  JSON.stringify(display) ); 
+	}
+	catch{
+		
+	}
+	  
 }
 
 exports.delete_post = function ( req, res )
 {
-	const token = req.body.token;
+	//const token = req.body.token;
+	const token = getTokenFromRequest(req);
 	const id =  parseInt( req.params.id );
 	if (!id)
 	{
@@ -114,6 +138,8 @@ exports.delete_post = function ( req, res )
 		return
 	}
 	post.status = status_enum.deleted;
-	res.send(  JSON.stringify( `deleted post with id ${id}`) );   
+	res.send(  JSON.stringify( `deleted post with id ${id}`) );
+	
+	db.updatePost(post);
 }
 

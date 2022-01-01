@@ -39,6 +39,7 @@ app.use(express.urlencoded( // to support URL-encoded bodies
 function get_version( req, res) 
 {
 	const version_obj = { version: package.version, description: package.description };
+	res.status( StatusCodes.OK );
 	res.send(  JSON.stringify( version_obj) );   
 }
 
@@ -72,7 +73,6 @@ router.get('/messages/(:id)', messages.get_messages )
 app.use('/api',router)
 
 // Init Serverr
-
 db.createDataBase();
 let msg = `${package.description} listening at port ${port}`
 app.listen(port, () => { console.log( msg ) ; })

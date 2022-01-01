@@ -1,9 +1,3 @@
-// External modules
-//const express = require('express')
-//const StatusCodes = require('http-status-codes').StatusCodes;
-//const package = require('./package.json');
-//const uuid = require('uuid'); //for unique id
-//const argon2 = require("argon2"); // for hashing
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
@@ -29,8 +23,7 @@ const initialUser =
 exports.createDataBase = function()
 {
 	//if not exist : create database directories
-	fs.mkdir(dbDir, {recursive: true } , (err) => { if(err){ console.log(err) }});
-	//fs.mkdir(messagesDBDir,{recursive : true},()=> { console.log(`Created a folder at:${messagesDBDir}`);} );
+	fs.mkdir(dbDir, {recursive: true } , (err) => { if(err){ console.log(err) }});	
 
 	if(!fs.existsSync(usersDBFile))
 	{
@@ -47,90 +40,130 @@ exports.createDataBase = function()
 	}
 }
 
-exports.addUserToDB = async function(user)
-{		
-	fs.readFile(usersDBFile, (err,data) => {
+async function addItemToDB(DbName,objectToAdd)
+{
+	fs.readFile(DbName, (err,data) => {
 		if(data)
 		{
-			//let userJson = JSON.stringify(user);
-			let fileContent = JSON.parse(data);
-			//fileContent.push(userJson);
-			fileContent.push(user);
-
-			fs.writeFile(usersDBFile, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});	
-			console.log("added new user to file");		
+			try{
+				let fileContent = JSON.parse(data);
+				fileContent.push(objectToAdd);
+				fs.writeFile(DbName, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});
+			}
+			catch{
+				let fileContent = [];
+				fileContent.push(objectToAdd);
+				fs.writeFile(DbName, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});
+			}			
 		}
 		else if(err){
-			console.log("Error: addUserToDB : ", err);
+			console.log("Error:", DbName ,err);
 		}
 	})
+}
+
+function addItemtoDBSync(dbName,objectToAdd){
+	try{
+		const fileContent = fs.readFileSync(dbName, {encoding:'utf8', flag:'r'});
+		itemsCollection = JSON.parse(fileContent);
+		itemsCollection.push(objectToAdd);
+
+		fs.writeFile(dbName, JSON.stringify(itemsCollection), (err) => { if(err){console.log(err);}});
+	}
+	catch{
+		itemsCollection = [];
+		itemsCollection.push(objectToAdd);
+
+		fs.writeFile(dbName, JSON.stringify(itemsCollection), (err) => { if(err){console.log(err);}});
+	}
+	
+
+}
+
+exports.addUserToDB = async function(user)
+{
+	//await addItemToDB(usersDBFile,user);
+	addItemtoDBSync(usersDBFile,user);
 }
 
 exports.addPostToDB = async function(post)
-{		
-	fs.readFile(postsDBFile, (err,data) => {
-		if(data)
-		{
-			//let postJson = JSON.stringify(post);
-			let fileContent = JSON.parse(data);
-			fileContent.push(post);
-
-			fs.writeFile(postsDBFile, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});
-		}
-		else if(err){
-			console.log("Error: addPostToDB : ", err);
-		}
-	})
+{
+	//await addItemToDB(postsDBFile,post);
+	addItemToDBSync(postsDBFile,post);
 }
 
 exports.addMessageToDB = async function(message)
-{		
-	fs.readFile(messagesDBFile, (err,data) => {
-		if(data)
-		{
-			//let postJson = JSON.stringify(message);
-			let fileContent = JSON.parse(data);
-			fileContent.push(message);
-
-			fs.writeFile(messagesDBFile, JSON.stringify(fileContent), (err) => { if(err){console.log(err);}});
-		}
-		else if(err){
-			console.log("Error: addMeesageToDB : ", err);
-		}
-	})
+{
+	//await addItemToDB(messagesDBFile,message);
+	addItemtoDBSync(messagesDBFile,message);
 }
+
+
+function getDbItemsSync(dbName)
+{
+	try{
+		let fileContent = JSON.parse(fs.readFileSync(dbName));
+		return fileContent;
+	}
+	catch{
+		return [];
+	}
+}
+
+
 
 exports.getUsers = function()
 {
-	return fileContent = JSON.parse(fs.readFileSync(usersDBFile));
+	return getDbItemsSync(usersDBFile);
 }
 
 exports.getPosts = function()
 {
-	return fileContent = JSON.parse(fs.readFileSync(postsDBFile));
+	return getDbItemsSync(postsDBFile); 
 }
 
 exports.getMessages = function()
 {
-	return fileContent = JSON.parse(fs.readFileSync(messagesDBFile));
+	return getDbItemsSync(messagesDBFile);
 }
+
+
+function updateDbItem(dbName,updatedItem)
+{
+	try{
+		fs.readFile(dbName, (err,data) => {
+			if(data)
+			{
+				try{					
+					let items = JSON.parse(data);					
+					let index = items.findIndex( currItem => currItem.id == updatedItem.id );
+					items[index] = updatedItem;
+		
+					fs.writeFile(dbName, JSON.stringify(items), (err) => { if(err){console.log(err);}});
+				}
+				catch( e ){
+					console.log("Error: unable to update: ", dbName, e);
+				}
+			}
+			else if(err)
+			{
+				console.log("Error: update : ", dbName, err);
+			}
+		})
+	}
+	catch(e){
+		console.log("Error: updating file : ", dbName, e);
+	}
+}
+
 
 exports.updateUser = async function(user)
 {
-	fs.readFile(usersDBFile, (err,data) => {
-		if(data)
-		{
-			users = JSON.parse(data);
-			index = users.findIndex( currUser => currUser.id == user.id );
-			users[index] = user;
-
-			fs.writeFile(usersDBFile, JSON.stringify(users), (err) => { if(err){console.log(err);}});
-		}
-		else if(err)
-		{
-			console.log("Error: updateUser : ", err);
-		}
-	})
+	updateDbItem(usersDBFile, user);
 }
 
+exports.updatePost = async function(post)
+{
+	updateDbItem(postsDBFile, post);
+}
 

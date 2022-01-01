@@ -29,6 +29,16 @@ let g_users = db.getUsers();
 // } ];
 
 
+function getTokenFromRequest(req){
+		
+	try{
+		return JSON.parse(req.headers.authorization).token;
+	}
+	catch{
+		return undefined;
+	}
+}
+
 exports.list_users = async function ( req, res) 
 {
 	let check = await auth_admin( req, res) ;
@@ -44,14 +54,16 @@ exports.get_not_deleted_users = function() {
 
 //for outside use - calls the inner func
 exports.authenticate_admin = function (req,res){
-	auth_admin(req,res);
+	return auth_admin(req,res);
 }
 
 //for inner file use
 function auth_admin(req,res){	
-	const token = req.body.token;
+	try{
+		const token = getTokenFromRequest(req);
+		
 
-	if (!token)
+		if (!token)
 	{
 		res.status( StatusCodes.BAD_REQUEST );
 		res.send("Missing token in request")
@@ -65,6 +77,16 @@ function auth_admin(req,res){
 	else{
 		return "admin";
 	}
+	}
+	catch( err ){
+		res.status(StatusCodes.BAD_REQUEST  )
+		res.send("Error: token in an ivalid format")
+		return "cant parse";
+	}
+	
+	//const token = req.body.token;
+
+	
 }
 
 exports.get_user = function ( req, res )
@@ -91,29 +113,37 @@ exports.get_user = function ( req, res )
 
 exports.ask_to_activate = function ( req, res )
 {
-	const id =  parseInt( req.params.id );
+	try{
+		const id =  parseInt( req.params.id );
 
-	if ( id <= 0)
-	{
+		if ( id <= 0)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Bad id given")
+			return;
+		}
+	
+		const user =  g_users.find( user =>  user.id == id )
+		if ( !user)
+		{
+			res.status( StatusCodes.NOT_FOUND );
+			res.send( "No such user")
+			return;
+		}
+	
+		res.send(  JSON.stringify( user) );
+	}
+	catch(e){
 		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
+		res.send( "Unable to send activation request");
 		return;
 	}
-
-	const user =  g_users.find( user =>  user.id == id )
-	if ( !user)
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-
-	res.send(  JSON.stringify( user) );
+	
 }
 
 exports.find_user_by_token = function ( req, res )
 {
-	const token = req.body.token;
+	const token = getTokenFromRequest(req);
 
 	if (!token)
 	{
@@ -133,30 +163,7 @@ exports.find_user_by_token = function ( req, res )
 
 exports.find_user_by_id = function ( req, res )
 {
-	const id =  parseInt( req.params.id );
-
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
-
-	const user =  g_users.find( user =>  user.id == id )
-	if ( !user)
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-	return user;   
-}
-
-exports.delete_user = async function ( req, res )
-{
-	let check = await auth_admin(req, res);
-	if(check == "admin")
-	{
+	try{
 		const id =  parseInt( req.params.id );
 
 		if ( id <= 0)
@@ -166,27 +173,67 @@ exports.delete_user = async function ( req, res )
 			return;
 		}
 
-		if ( id == 1)
-		{
-			res.status( StatusCodes.FORBIDDEN ); // Forbidden
-			res.send( "Can't delete root user")
-			return;		
-		}
-
-		const idx =  g_users.findIndex( user =>  user.id == id )
-		if ( idx < 0 )
+		const user =  g_users.find( user =>  user.id == id )
+		if ( !user)
 		{
 			res.status( StatusCodes.NOT_FOUND );
 			res.send( "No such user")
 			return;
 		}
-		user.status = status_enum.deleted;
-		
-		//updateDbPromise = db.updateUser(user);
-		res.send(  JSON.stringify( `deleted user with id ${id}` ) );   
+		return user;   
+	}
+	catch{
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send( "No such user")
+		return;
+	}
 
-		db.updateUser(user);
-		//await updateDbPromise;
+	
+}
+
+exports.delete_user = async function ( req, res )
+{
+	let check = await auth_admin(req, res);
+	if(check == "admin")
+	{
+		try{
+			const id =  parseInt( req.params.id );
+
+			if ( id <= 0)
+			{
+				res.status( StatusCodes.BAD_REQUEST );
+				res.send( "Bad id given")
+				return;
+			}
+	
+			if ( id == 1)
+			{
+				res.status( StatusCodes.FORBIDDEN ); // Forbidden
+				res.send( "Can't delete root user")
+				return;		
+			}
+	
+			const idx =  g_users.findIndex( user =>  user.id == id )
+			if ( idx < 0 )
+			{
+				res.status( StatusCodes.NOT_FOUND );
+				res.send( "No such user")
+				return;
+			}
+			const user = g_users[idx];
+			user.status = status_enum.deleted;
+			
+			//updateDbPromise = db.updateUser(user);
+			res.send(  JSON.stringify( `deleted user with id ${id}` ) );   
+	
+			db.updateUser(user);			
+		}
+		catch(e){
+			console.log("error deleting user:" , e);
+			res.status(StatusCodes.BAD_REQUEST);
+			res.send("error : unable to delete user");
+		}
+		
 	}
 }
 
@@ -226,6 +273,14 @@ exports.create_user = async function ( req, res )
 		return;
 	}
 
+	//test if email already used
+	let emailIndex = g_users.findIndex( user => email == user.email);
+	if(emailIndex >= 0){
+		res.status( StatusCodes.BAD_REQUEST );
+		res.send( "Email already in use");
+		return;
+	}
+
 	if (!password)
 	{
 		res.status( StatusCodes.BAD_REQUEST );
@@ -247,14 +302,11 @@ exports.create_user = async function ( req, res )
 						creation_date: user_creationDate,
 						status: user_status	} ;
 	g_users.push( new_user  );
-	
-	//addToDbPromise = db.addUserToDB(new_user);
+		
 	res.send(  JSON.stringify( new_user) );   
 	
-	db.addUserToDB(new_user);
-	//await addToDbPromise;
+	db.addUserToDB(new_user);	
 }
-
 
 
 async function argon2Async( prehashedPassword)
@@ -266,62 +318,14 @@ async function argon2Async( prehashedPassword)
 
 exports.update_user = function ( req, res )
 {
-	const id =  parseInt( req.params.id );
-
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
-
-	const idx =  g_users.findIndex( user =>  user.id == id )
-	if ( idx < 0 )
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-
-	const name = req.body.name;
-
-	if ( !name)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing name in request")
-		return;
-	}
-
-	const user = g_users[idx];
-	user.name = name;
-
-	//updateDbPromise = db.updateUser(user);
-	res.send(  JSON.stringify( {user}) );
-	
-	db.updateUser(user);
-	//await updateDbPromise;
-}
-
-
-exports.update_user_state = async function ( req, res )
-{
-	let check = auth_admin(req, res);
-	if(check == "admin")
-	{
+	try{
 		const id =  parseInt( req.params.id );
-		const new_status = req.body.status;
 
-		if ( id <= 0)
+		if ( id <= 0 || id == NaN)
 		{
 			res.status( StatusCodes.BAD_REQUEST );
 			res.send( "Bad id given")
 			return;
-		}
-		if ( id == 1)
-		{
-			res.status( StatusCodes.FORBIDDEN ); // Forbidden
-			res.send( "Can't update root user")
-			return;		
 		}
 
 		const idx =  g_users.findIndex( user =>  user.id == id )
@@ -331,32 +335,85 @@ exports.update_user_state = async function ( req, res )
 			res.send( "No such user")
 			return;
 		}
-		else // found id && not root 
-		{
-			const user = g_users[idx];
 
-			let user_status;
-			switch(new_status){
-				case "approve":
-					user.status = status_enum.active;
-				break;
-				case "suspend":
-					user.status = status_enum.suspended;
-				break;
-				case "restore":
-					user.status = status_enum.active;
-				break
-				default:
-					res.status( StatusCodes.NOT_FOUND );
-					res.send( "Not a valid status")
-					return;
+		const name = req.body.name;
+
+		if ( !name)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing name in request")
+			return;
+		}
+
+		const user = g_users[idx];
+		user.name = name;
+		
+		res.send(  JSON.stringify( {user}) );
+		
+		db.updateUser(user);		
+	}
+	catch(e){
+		console.log("error updating user: ", e);
+	}
+}
+
+exports.update_user_state = async function ( req, res )
+{
+	let check = auth_admin(req, res);
+	if(check == "admin")
+	{
+		try{
+			const id =  parseInt( req.params.id );
+			const new_status = req.body.status;
+
+			if ( id <= 0)
+			{
+				res.status( StatusCodes.BAD_REQUEST );
+				res.send( "Bad id given")
+				return;
+			}
+			if ( id == 1)
+			{
+				res.status( StatusCodes.FORBIDDEN ); // Forbidden
+				res.send( "Can't update root user")
+				return;		
 			}
 
-			//updateDbPromise = db.updateUser(user);
-			res.send(  JSON.stringify( {user}) ); 
-			
-			db.updateUser(user);
-			//await updateDbPromise;
+			const idx =  g_users.findIndex( user =>  user.id == id )
+			if ( idx < 0 )
+			{
+				res.status( StatusCodes.NOT_FOUND );
+				res.send( "No such user")
+				return;
+			}
+			else // found id && not root 
+			{
+				const user = g_users[idx];
+
+				let user_status;
+				switch(new_status){
+					case "approve":
+						user.status = status_enum.active;
+					break;
+					case "suspend":
+						user.status = status_enum.suspended;
+					break;
+					case "restore":
+						user.status = status_enum.active;
+					break
+					default:
+						res.status( StatusCodes.NOT_FOUND );
+						res.send( "Not a valid status")
+						return;
+				}
+				
+				res.send(  JSON.stringify( {user}) ); 
+				
+				db.updateUser(user);
+			}
+		}
+		catch{
+
 		}
 	}
 }
@@ -400,7 +457,7 @@ exports.login_user = function ( req, res )
 					console.log("logged in");
 				}
 				user.token = authentication_key;
-			 	res.send(JSON.stringify(authentication_key)); 
+			 	res.send(JSON.stringify({ token: authentication_key })); 
 			}
 			else{
 				res.status( StatusCodes.BAD_REQUEST);
@@ -416,8 +473,7 @@ exports.login_user = function ( req, res )
 
 exports.logout_user = function (req,res)
 {
-	console.log("in logout func");
-	const token = req.body.token;
+	const token = getTokenFromRequest(req);
 
 	if (!token)
 	{
@@ -433,8 +489,10 @@ exports.logout_user = function (req,res)
 		return;
 	}
   
-	user.token = "";
+	//give random unknown token
+	user.token = uuid.v4();
 	res.status( StatusCodes.OK);
 	res.send(`logged out ${user.name}`);
 }
+
 

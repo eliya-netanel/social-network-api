@@ -11,78 +11,101 @@ const moment = require('moment');
 var db = require('./DB');
 var users = require('./users');
 
-const g_messages = [ ];
+db.createDataBase();
+const g_messages = db.getMessages();
+
+
+function getTokenFromRequest(req){
+		
+	try{
+		return JSON.parse(req.headers.authorization).token;
+	}
+	catch{
+		return undefined;
+	}
+}
 
 
 exports.send_message = function ( req, res )
 {
-	const id =  parseInt( req.params.id );
-	const token = req.body.token;
-	const text = req.body.text;
+	try{
+		const id =  parseInt( req.params.id );
+		const token = getTokenFromRequest(req);
+		//const token = req.body.token;
+		const text = req.body.text;
 
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
+		if ( id <= 0)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Bad id given")
+			return;
+		}
+
+		//find sendee
+		const recipient = users.find_user_by_id(req, res);
+		const idx = recipient.id;
+		//	const[] idx =  g_users.findIndex( user =>  user.id == id )
+		if ( idx < 0 )
+		{
+			res.status( StatusCodes.NOT_FOUND );
+			res.send( "No such user")
+			return;
+		}
+
+		if (!text)
+		{
+
+			
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing text in request")
+			return;
+		}
+
+		if (!token)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing token in request")
+			return;
+		}
+
+		//find sender 
+		const sender = users.find_user_by_token(req, res);
+		//const sender = g_users.find(( curr_user ) => token === curr_user.token)
+		if(sender == undefined){
+			res.status( StatusCodes.BAD_REQUEST);
+			res.send("Couldn't find user with key")
+			return
+		}
+
+		//create post details
+		let message_id = g_messages.length+1;
+		let message_creationDate = moment().format('DD-MM-YYYY');
+		let message_text = text;
+		let message_sender_id = sender.id;
+		let message_recipient_id = idx;
+
+		//add message
+		const new_message = { 	message_id: message_id , 
+							sender_id: message_sender_id, 
+							recipient_id: message_recipient_id,
+							creation_date: message_creationDate,
+							text: message_text	} ;
+		g_messages.push( new_message);
+
+		res.send(  JSON.stringify( new_message) );
+
+		db.addMessageToDB(new_message);
 	}
+	catch{
 
-	//find sendee
-	const recipient = users.find_user_by_id(req, res);
-	const idx = recipient.id;
-//	const idx =  g_users.findIndex( user =>  user.id == id )
-	if ( idx < 0 )
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-
-	if (!text)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing text in request")
-		return;
-	}
-
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing token in request")
-		return;
-	}
-
-	//find sender 
-	const sender = users.find_user_by_token(req, res);
-	//const sender = g_users.find(( curr_user ) => token === curr_user.token)
-	if(sender == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("Couldn't find user with key")
-		return
 	}
 	
-	//create post details
-	let message_id = g_messages.length+1;
-	let message_creationDate = moment().format('DD-MM-YYYY');
-	let message_text = text;
-	let message_sender_id = sender.id;
-	let message_recipient_id = idx;
-
-	//add message
-	const new_message = { 	message_id: message_id , 
-						sender_id: message_sender_id, 
-						recipient_id: message_recipient_id,
-						creation_date: message_creationDate,
-						text: message_text	} ;
-	g_messages.push( new_message);
-	
-	res.send(  JSON.stringify( new_message) );   
 };
 
 exports.send_messages = async function (req, res) {
 
 	let check = users.authenticate_admin(req, res);
-	const num_of_recipients = 0;
+	let num_of_recipients = 0;
 	if(check == "admin"){
 		const text = req.body.text;
 
@@ -110,6 +133,8 @@ exports.send_messages = async function (req, res) {
 								creation_date: message_creationDate,
 								text: message_text	} ;
 			g_messages.push( new_message);
+
+			db.addMessageToDB(new_message);
 			
 			console.log(`user ${user.id} got message`);	
 			
@@ -120,44 +145,53 @@ exports.send_messages = async function (req, res) {
 }
 
 exports.get_messages = function (req,res){
-	const token = req.body.token;
-	const id =  parseInt( req.params.id );
+	
+	try{
+		const token = getTokenFromRequest(red);
+		const id =  parseInt( req.params.id );
 
-	if (!id)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing id in request")
-		return;
-	}
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
+		if (!id)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing id in request")
+			return;
+		}
+		if ( id <= 0)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Bad id given")
+			return;
+		}
 
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing token in request")
-		return;
-	}
+		if (!token)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing token in request")
+			return;
+		}
 
-	//find user
-	const user = users.find_user_by_token(req,res);
-	if(user == undefined){
+		//find user
+		const user = users.find_user_by_token(req,res);
+		if(user == undefined){
+			res.status( StatusCodes.BAD_REQUEST);
+			res.send("no user with key")
+			return
+		}
+		if(user.token != token){
+			res.status( StatusCodes.BAD_REQUEST);
+			res.send("only recipient can see mmesages")
+			return
+		}
+
+		const filtered = g_messages.filter(message => user.id == message.recipient_id);
+		res.send(  JSON.stringify( filtered) );
+	}
+	catch(e){
 		res.status( StatusCodes.BAD_REQUEST);
-		res.send("no user with key")
-		return
+			res.send("something went wrong")
+			return
 	}
-	if(user.token != token){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("only recipient can see mmesages")
-		return
-	}
-
-	const filtered = g_messages.filter(message => user.id == message.recipient_id);
-	res.send(  JSON.stringify( filtered) );   
+	
 }
 
 exports.send_activation_msg = function(req,res){
@@ -180,4 +214,6 @@ exports.send_activation_msg = function(req,res){
 	g_messages.push( new_message);
 	
 	res.send(  JSON.stringify( new_message) );
+
+	db.addMessageToDB(new_message);
 }}
