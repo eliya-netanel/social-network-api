@@ -6,7 +6,7 @@ const argon2 = require("argon2"); // for hashing
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
-var db = require('./DB');
+const db = require('./DB');
 
 const status_enum = Object.freeze( {
 	created : "created",
@@ -16,17 +16,8 @@ const status_enum = Object.freeze( {
 });
 
 
-db.createDataBase();
-let g_users = db.getUsers();
-// let g_users = 
-// [ {	
-// 	id:1, 
-//     name: 'Root admin',
-//     email:"admin@gmail.com",
-//     password: '$argon2i$v=19$m=512,t=2,p=2$aI2R0hpDyLm3ltLa+1/rvQ$LqPKjd6n8yniKtAithoR7A',
-//     token: "",
-//     status: "active"
-// } ];
+// db.createDataBase();
+// let g_users = db.getUsers();
 
 
 function getTokenFromRequest(req){
@@ -43,13 +34,16 @@ exports.list_users = async function ( req, res)
 {
 	let check = await auth_admin( req, res) ;
 	if(check == "admin"){
-		const display = g_users.filter(user => user.status != status_enum.deleted);
+		const display = db.get_g_users().filter(user => user.status != status_enum.deleted);
 		res.send(  JSON.stringify(display) );   
 	}
 }
 
+
+
+
 exports.get_not_deleted_users = function() {
-	return g_users.filter(user => user.status != status_enum.deleted); 
+	return db.get_g_users().filter(user => user.status != status_enum.deleted); 
 }
 
 //for outside use - calls the inner func
@@ -69,7 +63,7 @@ function auth_admin(req,res){
 		res.send("Missing token in request")
 		return "no token";
 	}
-	if(token != g_users[0].token){
+	if(token != db.get_g_users()[0].token){
 		res.status( StatusCodes.UNAUTHORIZED );
 		res.send( "Only admin can access")
 		return "not admin";
@@ -81,34 +75,36 @@ function auth_admin(req,res){
 	catch( err ){
 		res.status(StatusCodes.BAD_REQUEST  )
 		res.send("Error: token in an ivalid format")
-		return "cant parse";
+		return;
 	}
-	
-	//const token = req.body.token;
-
-	
 }
 
 exports.get_user = function ( req, res )
 {
-	const id =  parseInt( req.params.id );
+	try{
+		const id =  parseInt( req.params.id );
 
-	if ( id <= 0)
-	{
+		if ( id <= 0)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Bad id given")
+			return;
+		}
+	
+		const user =  db.get_g_users().find( user =>  user.id == id )
+		if ( !user)
+		{
+			res.status( StatusCodes.NOT_FOUND );
+			res.send( "No such user")
+			return;
+		}
+	
+		res.send(  JSON.stringify( user) );
+	}
+	catch{
 		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
+		res.send( "something went wrong")
 	}
-
-	const user =  g_users.find( user =>  user.id == id )
-	if ( !user)
-	{
-		res.status( StatusCodes.NOT_FOUND );
-		res.send( "No such user")
-		return;
-	}
-
-	res.send(  JSON.stringify( user) );
 }
 
 exports.ask_to_activate = function ( req, res )
@@ -123,7 +119,7 @@ exports.ask_to_activate = function ( req, res )
 			return;
 		}
 	
-		const user =  g_users.find( user =>  user.id == id )
+		const user =  db.get_g_users().find( user =>  user.id == id )
 		if ( !user)
 		{
 			res.status( StatusCodes.NOT_FOUND );
@@ -138,7 +134,6 @@ exports.ask_to_activate = function ( req, res )
 		res.send( "Unable to send activation request");
 		return;
 	}
-	
 }
 
 exports.find_user_by_token = function ( req, res )
@@ -151,7 +146,7 @@ exports.find_user_by_token = function ( req, res )
 		res.send("Missing token in request")
 		return "no token";
 	}
-	const user =  g_users.find( user =>  user.token == token )
+	const user =  db.get_g_users().find( user =>  user.token == token )
 	if ( !user)
 	{
 		res.status( StatusCodes.NOT_FOUND );
@@ -173,7 +168,7 @@ exports.find_user_by_id = function ( req, res )
 			return;
 		}
 
-		const user =  g_users.find( user =>  user.id == id )
+		const user =  db.get_g_users().find( user =>  user.id == id )
 		if ( !user)
 		{
 			res.status( StatusCodes.NOT_FOUND );
@@ -187,8 +182,6 @@ exports.find_user_by_id = function ( req, res )
 		res.send( "No such user")
 		return;
 	}
-
-	
 }
 
 exports.delete_user = async function ( req, res )
@@ -213,14 +206,14 @@ exports.delete_user = async function ( req, res )
 				return;		
 			}
 	
-			const idx =  g_users.findIndex( user =>  user.id == id )
+			const idx =  db.get_g_users().findIndex( user =>  user.id == id )
 			if ( idx < 0 )
 			{
 				res.status( StatusCodes.NOT_FOUND );
 				res.send( "No such user")
 				return;
 			}
-			const user = g_users[idx];
+			const user = db.get_g_users()[idx];
 			user.status = status_enum.deleted;
 			
 			//updateDbPromise = db.updateUser(user);
@@ -274,7 +267,7 @@ exports.create_user = async function ( req, res )
 	}
 
 	//test if email already used
-	let emailIndex = g_users.findIndex( user => email == user.email);
+	let emailIndex = db.get_g_users().findIndex( user => email == user.email);
 	if(emailIndex >= 0){
 		res.status( StatusCodes.BAD_REQUEST );
 		res.send( "Email already in use");
@@ -289,7 +282,7 @@ exports.create_user = async function ( req, res )
 	}
 
 	//create user details
-	let user_id = g_users.length +1 ;
+	let user_id = db.get_g_users().length +1 ;
 	let user_hashedpassword = await argon2Async(password);
 	let user_creationDate = moment().format('DD-MM-YYYY');
 	let user_status = status_enum.created;
@@ -301,7 +294,7 @@ exports.create_user = async function ( req, res )
 						password : user_hashedpassword,
 						creation_date: user_creationDate,
 						status: user_status	} ;
-	g_users.push( new_user  );
+	//g_users.push( new_user  );
 		
 	res.send(  JSON.stringify( new_user) );   
 	
@@ -315,7 +308,6 @@ async function argon2Async( prehashedPassword)
 	return hashPromise;
 }
 
-
 exports.update_user = function ( req, res )
 {
 	try{
@@ -328,7 +320,7 @@ exports.update_user = function ( req, res )
 			return;
 		}
 
-		const idx =  g_users.findIndex( user =>  user.id == id )
+		const idx =  db.get_g_users().findIndex( user =>  user.id == id )
 		if ( idx < 0 )
 		{
 			res.status( StatusCodes.NOT_FOUND );
@@ -345,7 +337,7 @@ exports.update_user = function ( req, res )
 			return;
 		}
 
-		const user = g_users[idx];
+		const user = db.get_g_users()[idx];
 		user.name = name;
 		
 		res.send(  JSON.stringify( {user}) );
@@ -354,6 +346,7 @@ exports.update_user = function ( req, res )
 	}
 	catch(e){
 		console.log("error updating user: ", e);
+		return;
 	}
 }
 
@@ -379,7 +372,7 @@ exports.update_user_state = async function ( req, res )
 				return;		
 			}
 
-			const idx =  g_users.findIndex( user =>  user.id == id )
+			const idx =  db.get_g_users().findIndex( user =>  user.id == id )
 			if ( idx < 0 )
 			{
 				res.status( StatusCodes.NOT_FOUND );
@@ -388,7 +381,7 @@ exports.update_user_state = async function ( req, res )
 			}
 			else // found id && not root 
 			{
-				const user = g_users[idx];
+				const user = db.get_g_users()[idx];
 
 				let user_status;
 				switch(new_status){
@@ -438,7 +431,7 @@ exports.login_user = function ( req, res )
 		res.send( "Missing password in request")
 		return;
 	}
-	let user_list = g_users;
+	let user_list = db.get_g_users();
 	const user = user_list.find(( curr_user ) => email === curr_user.email)
 	if (user != undefined)
 	{
@@ -458,6 +451,8 @@ exports.login_user = function ( req, res )
 				}
 				user.token = authentication_key;
 			 	res.send(JSON.stringify({ token: authentication_key })); 
+				
+				db.updateUser(user);
 			}
 			else{
 				res.status( StatusCodes.BAD_REQUEST);
@@ -481,7 +476,7 @@ exports.logout_user = function (req,res)
 		res.send("Missing token in request")
 		return "no token";
 	}
-	const user =  g_users.find( user =>  user.token == token )
+	const user =  db.get_g_users().find( user =>  user.token == token )
 	if ( !user)
 	{
 		res.status( StatusCodes.NOT_FOUND );
@@ -493,6 +488,17 @@ exports.logout_user = function (req,res)
 	user.token = uuid.v4();
 	res.status( StatusCodes.OK);
 	res.send(`logged out ${user.name}`);
+
+	db.updateUser(user);
 }
 
+
+exports.logout_all_users = function(){
+	g_users = db.get_g_users();
+	for (const user of g_users) 
+	{
+		user.token = uuid.v4();
+		db.updateUser(user);
+	}
+}
 

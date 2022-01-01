@@ -11,8 +11,8 @@ const moment = require('moment');
 var db = require('./DB');
 var users = require('./users');
 
-db.createDataBase();
-const g_messages = db.getMessages();
+// db.createDataBase();
+// const g_messages = db.getMessages();
 
 
 function getTokenFromRequest(req){
@@ -78,7 +78,7 @@ exports.send_message = function ( req, res )
 		}
 
 		//create post details
-		let message_id = g_messages.length+1;
+		let message_id = db.get_g_messages().length+1;
 		let message_creationDate = moment().format('DD-MM-YYYY');
 		let message_text = text;
 		let message_sender_id = sender.id;
@@ -90,14 +90,15 @@ exports.send_message = function ( req, res )
 							recipient_id: message_recipient_id,
 							creation_date: message_creationDate,
 							text: message_text	} ;
-		g_messages.push( new_message);
+		//g_messages.push( new_message);
 
 		res.send(  JSON.stringify( new_message) );
 
 		db.addMessageToDB(new_message);
 	}
 	catch{
-
+		res.status( StatusCodes.BAD_REQUEST);
+		res.send("error: something happened")
 	}
 	
 };
@@ -124,15 +125,16 @@ exports.send_messages = async function (req, res) {
 
 		g_users.forEach(user => {
 			//create message details
-			let message_id = g_messages.length+1;
+			let message_id = db.get_g_messages().length+1;
 			let message_recipient_id = user.id;
 			//add message
 			const new_message = { 	message_id: message_id , 
 								sender_id: message_sender_id, 
 								recipient_id: message_recipient_id,
 								creation_date: message_creationDate,
-								text: message_text	} ;
-			g_messages.push( new_message);
+								text: message_text	
+								};
+			//g_messages.push( new_message);
 
 			db.addMessageToDB(new_message);
 			
@@ -183,7 +185,7 @@ exports.get_messages = function (req,res){
 			return
 		}
 
-		const filtered = g_messages.filter(message => user.id == message.recipient_id);
+		const filtered = db.get_g_messages().filter(message => user.id == message.recipient_id);
 		res.send(  JSON.stringify( filtered) );
 	}
 	catch(e){
@@ -199,7 +201,7 @@ exports.send_activation_msg = function(req,res){
 
 	if(user){
 
-	let message_id = g_messages.length+1;
+	let message_id = db.get_g_messages().length+1;
 	let message_creationDate = moment().format('DD-MM-YYYY');
 	let message_text = "please make me an active user";
 	let message_sender_id = user.id;
@@ -211,7 +213,7 @@ exports.send_activation_msg = function(req,res){
 						recipient_id: message_recipient_id,
 						creation_date: message_creationDate,
 						text: message_text	} ;
-	g_messages.push( new_message);
+	//g_messages.push( new_message);
 	
 	res.send(  JSON.stringify( new_message) );
 

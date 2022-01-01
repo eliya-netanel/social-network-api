@@ -11,8 +11,8 @@ var db = require('./DB');
 var users = require('./users');
 //var ex02 = require('./Ex02');
 
-db.createDataBase();
-const g_posts = db.getPosts();
+// db.createDataBase();
+// const g_posts = db.getPosts();
 
 const status_enum = Object.freeze( {
 	created : "created",
@@ -62,17 +62,18 @@ exports.create_post = function(req, res)
 	}
 
 	//create post details
-	let post_id = g_posts.length+1;
+	let post_id = db.get_g_posts().length+1;
 	let post_creationDate = moment().format('DD-MM-YYYY');
 	let post_text = text;
 	let post_creator_id = user.id;
 
 	//add post
-	const new_post = { 	id: post_id , 
+	const new_post= { 	id: post_id , 
 						creator_id: post_creator_id, 
 						creation_date: post_creationDate,
-						text: post_text	} ;
-	g_posts.push( new_post);
+						text: post_text	
+					} ;
+	//g_posts.push( new_post);
 	
 	res.send(  JSON.stringify( new_post) );
 	
@@ -84,7 +85,7 @@ exports.get_posts = function ( req, res)
 	try{
 		const user = users.find_user_by_token(req,res);
 
-		const display = g_posts.filter(post => post.status != status_enum.deleted);
+		const display = db.get_g_posts().filter(post => post.status != status_enum.deleted);
 		res.send(  JSON.stringify(display) ); 
 	}
 	catch{
@@ -93,53 +94,60 @@ exports.get_posts = function ( req, res)
 	  
 }
 
+
 exports.delete_post = function ( req, res )
 {
-	//const token = req.body.token;
-	const token = getTokenFromRequest(req);
-	const id =  parseInt( req.params.id );
-	if (!id)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing id in request")
-		return;
-	}
-	if ( id <= 0)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Bad id given")
-		return;
-	}
+	try{
+		const token = getTokenFromRequest(req);
+		const id =  parseInt( req.params.id );
+		if (!id)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing id in request")
+			return;
+		}
+		if ( id <= 0)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Bad id given")
+			return;
+		}
 
-	if (!token)
-	{
-		res.status( StatusCodes.BAD_REQUEST );
-		res.send( "Missing token in request")
-		return;
-	}
+		if (!token)
+		{
+			res.status( StatusCodes.BAD_REQUEST );
+			res.send( "Missing token in request")
+			return;
+		}
 
-	//find post
-	const post = g_posts.find((curr_post) => id === curr_post.id)
-	if(post == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("Couldn't find post with id")
-		return
+		//find post
+		const post = db.get_g_posts().find((curr_post) => id === curr_post.id)
+		if(post == undefined){
+			res.status( StatusCodes.BAD_REQUEST);
+			res.send("Couldn't find post with id")
+			return
+		}
+		//find user
+		const user = users.find_user_by_token(req,res);
+		if(user == undefined){
+			res.status( StatusCodes.BAD_REQUEST);
+			res.send("no user with key")
+			return
+		}
+		if(user.id != post.creator_id && user.id != 1){
+			res.status( StatusCodes.BAD_REQUEST);
+			res.send("only creator can delets post")
+			return
+		}
+
+		post.status = status_enum.deleted;
+		res.send(  JSON.stringify( `deleted post with id ${id}`) );
+		
+		db.updatePost(post);
 	}
-	//find user
-	const user = users.find_user_by_token(req,res);
-	if(user == undefined){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("no user with key")
-		return
+	catch{
+
 	}
-	if(user.id != post.creator_id && user.id != 1){
-		res.status( StatusCodes.BAD_REQUEST);
-		res.send("only creator can delets post")
-		return
-	}
-	post.status = status_enum.deleted;
-	res.send(  JSON.stringify( `deleted post with id ${id}`) );
 	
-	db.updatePost(post);
 }
 
